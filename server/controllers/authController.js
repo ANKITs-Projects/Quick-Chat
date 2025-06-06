@@ -1,13 +1,14 @@
 const router = require('express').Router();
 const users =  require('./../models/user')
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 router.post('/signup', async (req,res)=> {
     try{
         // 1. Check the user is already exists or not
         console.log(req.body)
         const user = await users.findOne({email: req.body.email});
-        console.log("in req")
+        
         // 2.If aalready exists, send err response
         if(user){
             return res.send({
@@ -31,6 +32,43 @@ router.post('/signup', async (req,res)=> {
 
     }
     catch(err){
+        res.send({
+            message : err.message,
+            success : false
+        })
+    }
+})
+
+router.post('/login', async (req,res)=>{
+    try{
+        // Check user is exists
+        const user = await users.findOne({email : req.body.email})
+        if(!user){
+            return res.send({
+                message : "User does not exist",
+                success : false
+            })
+        }
+
+        // check password is correct
+        const isValid = await bcrypt.compare(req.body.password, user.password)
+        if(!isValid){
+            return res.send({
+                message : "Incorrect Password",
+                success : false
+            })
+        }
+
+        // if both are correct assign tson web token
+        const token = jwt.sign({userId : user._id}, process.env.SECRET_KEY, {expiresIn: "1d"})
+        res.send({
+            message : "User Login Succesfully",
+            success : true,
+            token : token
+        })
+
+
+    }catch(err){
         res.send({
             message : err.message,
             success : false
